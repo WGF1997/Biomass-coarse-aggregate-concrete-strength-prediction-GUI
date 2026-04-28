@@ -1,8 +1,8 @@
-# CS Loss Rate Prediction GUI
+# Biomass coarse aggregate concrete strength prediction GUI
 
-This repository provides an open-source graphical user interface (GUI) for predicting the compressive strength loss rate of concrete based on machine learning.
+This repository provides an open-source graphical user interface (GUI) for predicting the biomass coarse aggregate concrete compressive strength based on machine learning.
 
-The GUI was developed using Python and Streamlit. Users can input feature values through a web-based interface and obtain the predicted compressive strength loss rate and prediction interval.
+The GUI was developed using Python and Streamlit. Users can input feature values through a web-based interface and obtain the predicted biomass coarse aggregate concrete compressive strength and prediction interval.
 
 ## Features
 
@@ -15,11 +15,9 @@ The GUI was developed using Python and Streamlit. Users can input feature values
 ## Project Structure
 
 ```text
-CS-loss-rate-prediction-GUI/
+Biomass coarse aggregate concrete strength prediction-GUI/
 ├── app.py
 ├── model.pkl
 ├── requirements.txt
 ├── README.md
-├── LICENSE
-├── dataset/
-└── images/
+└── LICENSE
