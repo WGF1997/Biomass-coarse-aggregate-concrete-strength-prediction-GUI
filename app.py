@@ -7,9 +7,9 @@ import shap
 from catboost import CatBoostRegressor
 
 # Page configuration
-st.set_page_config(page_title="Biomass Coarse Aggregate Concrete Strength Predictor", layout="wide")
-st.title("🌱 Biomass Coarse Aggregate Concrete Compressive Strength Predictor")
-st.markdown("Powered by **CatBoost** – interpretable design tool with SHAP analysis and mix optimization recommendations.")
+st.set_page_config(page_title="Plant-Based Biomass Coarse Aggregate Concrete Strength Predictor", layout="wide")
+st.title("🌱 Plant-Based Biomass Coarse Aggregate Concrete Compressive Strength Predictor")
+st.markdown("Powered by **Bayesian-optimized CatBoost** – interpretable design tool with SHAP analysis and mix optimization recommendations.")
 
 # ---------- Load model ----------
 @st.cache_resource
@@ -32,7 +32,7 @@ defaults = {
     "prewater": 50.0,
     "sand": 900.0,
     "nca": 800.0,
-    "bca": 200.0,
+    "pbca": 200.0,
     "r": 25.0,
     "sp": 6.0,
     "wb": 10.0,
@@ -49,9 +49,9 @@ for key, val in defaults.items():
 
 # ---------- Sidebar input controls ----------
 st.sidebar.header("📊 Input Mix Parameters")
-st.sidebar.markdown("💡 **Note**: R is the **volume‑based** replacement ratio (by volume of coarse aggregate).")
+st.sidebar.markdown("💡 **Note**: R is the **volume-based** replacement ratio by volume of coarse aggregate.")
 
-# Reset button (placed right after the header)
+# Reset button
 if st.sidebar.button("🔄 Reset to Defaults"):
     for key, val in defaults.items():
         st.session_state[key] = val
@@ -63,15 +63,47 @@ water = st.sidebar.number_input("Water (kg/m³)", min_value=0.0, max_value=300.0
 prewater = st.sidebar.number_input("Pre-wetted water (kg/m³)", min_value=0.0, max_value=150.0, value=st.session_state.prewater, step=5.0, key="prewater")
 sand = st.sidebar.number_input("Sand (kg/m³)", min_value=0.0, max_value=1500.0, value=st.session_state.sand, step=10.0, key="sand")
 nca = st.sidebar.number_input("Natural coarse aggregate (kg/m³)", min_value=0.0, max_value=1600.0, value=st.session_state.nca, step=10.0, key="nca")
-bca = st.sidebar.number_input("Biomass coarse aggregate (kg/m³)", min_value=0.0, max_value=800.0, value=st.session_state.bca, step=5.0, key="bca")
-r = st.sidebar.number_input("Replacement ratio R (%)", min_value=0.0, max_value=100.0, value=st.session_state.r, step=1.0,
-                            help="Volume-based replacement ratio: V_BCA / (V_BCA + V_NCA).", key="r")
+pbca = st.sidebar.number_input("Plant-based biomass coarse aggregate (kg/m³)", min_value=0.0, max_value=800.0, value=st.session_state.pbca, step=5.0, key="pbca")
+
+r = st.sidebar.number_input(
+    "Replacement ratio R (%)",
+    min_value=0.0,
+    max_value=100.0,
+    value=st.session_state.r,
+    step=1.0,
+    help="Volume-based replacement ratio: V_PBCA / (V_PBCA + V_NCA).",
+    key="r"
+)
+
 sp = st.sidebar.number_input("Superplasticizer (kg/m³)", min_value=0.0, max_value=30.0, value=st.session_state.sp, step=0.5, key="sp")
 
-# Biomass aggregate properties
-wb = st.sidebar.number_input("Water absorption of biomass coarse aggregate (%)", min_value=0.0, max_value=50.0, value=st.session_state.wb, step=1.0, key="wb")
-rho_b = st.sidebar.number_input("Bulk density of biomass coarse aggregate (kg/m³)", min_value=300.0, max_value=1300.0, value=st.session_state.rho_b, step=10.0, key="rho_b")
-dbmax = st.sidebar.number_input("Maximum particle size of biomass coarse aggregate (mm)", min_value=1.0, max_value=50.0, value=st.session_state.dbmax, step=1.0, key="dbmax")
+# Plant-based biomass aggregate properties
+wb = st.sidebar.number_input(
+    "Water absorption of plant-based biomass coarse aggregate (%)",
+    min_value=0.0,
+    max_value=50.0,
+    value=st.session_state.wb,
+    step=1.0,
+    key="wb"
+)
+
+rho_b = st.sidebar.number_input(
+    "Bulk density of plant-based biomass coarse aggregate (kg/m³)",
+    min_value=300.0,
+    max_value=1300.0,
+    value=st.session_state.rho_b,
+    step=10.0,
+    key="rho_b"
+)
+
+dbmax = st.sidebar.number_input(
+    "Maximum particle size of plant-based biomass coarse aggregate (mm)",
+    min_value=1.0,
+    max_value=50.0,
+    value=st.session_state.dbmax,
+    step=1.0,
+    key="dbmax"
+)
 
 # Process parameters
 curing_age = st.sidebar.number_input("Curing age (days)", min_value=1, max_value=365, value=st.session_state.curing_age, step=1, key="curing_age")
@@ -80,7 +112,7 @@ slump = st.sidebar.number_input("Slump (mm)", min_value=0, max_value=300, value=
 # Derived features
 wc = water / cement if cement > 0 else 0.0
 cs_ratio = cement / sand if sand > 0 else 0.0
-cb_ratio = cement / bca if bca > 0 else 0.0
+cpb_ratio = cement / pbca if pbca > 0 else 0.0
 
 # ---------- Build input dictionary ----------
 input_dict = {
@@ -90,19 +122,19 @@ input_dict = {
     "Pre-wetted water": prewater,
     "Sand": sand,
     "NCA": nca,
-    "BCA": bca,
+    "PBCA": pbca,
     "R": r,
     "SP": sp,
     "Water/Cement": wc,
     "Cement/Sand": cs_ratio,
-    "Cement/BCA": cb_ratio,
+    "Cement/PBCA": cpb_ratio,
     "WB": wb,
     "ρB": rho_b,
     "DB-MAX": dbmax,
     "Slump": slump
 }
 
-# ---------- Feature order (must match training order) ----------
+# ---------- Feature order ----------
 feature_order = [
     "Curing age",
     "Cement",
@@ -110,12 +142,12 @@ feature_order = [
     "Pre-wetted water",
     "Sand",
     "NCA",
-    "BCA",
+    "PBCA",
     "R",
     "SP",
     "Water/Cement",
     "Cement/Sand",
-    "Cement/BCA",
+    "Cement/PBCA",
     "WB",
     "ρB",
     "DB-MAX",
@@ -129,31 +161,42 @@ if st.sidebar.button("🚀 Predict Strength", type="primary"):
 
     st.subheader("📈 Prediction Result")
     col1, col2 = st.columns(2)
+
     with col1:
-        st.metric(label="**Predicted Compressive Strength (CS)**", value=f"{prediction:.2f} MPa",
-                  delta=f"{prediction - 23:.2f} MPa vs baseline (23 MPa)")
+        st.metric(
+            label="**Predicted Compressive Strength (CS)**",
+            value=f"{prediction:.2f} MPa",
+            delta=f"{prediction - 23:.2f} MPa vs baseline (23 MPa)"
+        )
+
     with col2:
         st.info("💡 Prediction based on your input parameters – useful for mix design optimization.")
 
-    # SHAP (optional)
+    # SHAP optional
     try:
         # If you have a saved TreeExplainer, uncomment below
         # explainer = joblib.load("explainer.pkl")
         # shap_values = explainer.shap_values([input_vector])
         # fig, ax = plt.subplots()
-        # shap.waterfall_plot(shap.Explanation(values=shap_values[0],
-        #                                      base_values=explainer.expected_value,
-        #                                      data=np.array(input_vector),
-        #                                      feature_names=feature_order),
-        #                     show=False)
+        # shap.waterfall_plot(
+        #     shap.Explanation(
+        #         values=shap_values[0],
+        #         base_values=explainer.expected_value,
+        #         data=np.array(input_vector),
+        #         feature_names=feature_order
+        #     ),
+        #     show=False
+        # )
         # st.pyplot(fig)
+
         st.markdown("📖 **SHAP model explanation** – To enable, save a TreeExplainer object as 'explainer.pkl'.")
     except:
         st.warning("⚠️ SHAP explainer not loaded, skipping explanation chart.")
 
-    # Mix design recommendations (same as before)
+    # Mix design recommendations
     st.subheader("🔧 Mix Design Recommendations")
     recs = []
+
     if wc < 0.40:
         recs.append("✅ **Water/cement ratio in optimal range (<0.40)**, favorable for high strength.")
     elif 0.40 <= wc <= 0.45:
@@ -168,14 +211,10 @@ if st.sidebar.button("🚀 Predict Strength", type="primary"):
     elif curing_age >= 28:
         recs.append("✅ Curing age sufficient; combined with low W/C leads to good strength.")
 
-    if 40 <= prewater <= 80:
-        recs.append("✅ **Pre-wetted water within optimal range (40–80 kg/m³)** – beneficial internal curing effect.")
-    else:
-        recs.append("⚠️ Pre-wetted water outside 40–80 kg/m³ range – adjust.")
-
     water_ok = 160 <= water <= 180
     sp_ok = 5 <= sp <= 7.5
     slump_ok = 150 <= slump <= 220
+
     if water_ok and sp_ok and slump_ok:
         recs.append("✅ **Water (160–180), SP (5–7.5) and slump (150–220) are in synergistic optimal zone.**")
     else:
@@ -193,7 +232,8 @@ if st.sidebar.button("🚀 Predict Strength", type="primary"):
     elif 20 < r <= 30:
         recs.append("⚠️ R in critical transition zone (20–30%) – strength highly sensitive.")
     else:
-        recs.append("❌ **R >30%** – strength fully governed by biomass aggregate. Compensatory measures required:")
+        recs.append("❌ **R >30%** – strength fully governed by plant-based biomass aggregate. Compensatory measures required:")
+
         if cement < 450:
             recs.append("   • Increase cement content (≥450 kg/m³).")
         if water > 180:
@@ -201,18 +241,21 @@ if st.sidebar.button("🚀 Predict Strength", type="primary"):
         if cs_ratio < 0.7:
             recs.append("   • Increase sand ratio (Cement/Sand ≈0.7–0.9).")
         if rho_b < 800:
-            recs.append("   • Biomass aggregate bulk density should be ≥800 kg/m³.")
+            recs.append("   • Plant-based biomass aggregate bulk density should be ≥800 kg/m³.")
         if wb > 10:
-            recs.append("   • Biomass aggregate water absorption ≤10% recommended.")
+            recs.append("   • Plant-based biomass aggregate water absorption ≤10% recommended.")
         if dbmax > 10:
             recs.append("   • Maximum particle size should be 5–10 mm.")
 
     if rho_b < 800:
-        recs.append("⚠️ Biomass aggregate bulk density low (<800 kg/m³). Choose higher‑density aggregate.")
+        recs.append("⚠️ Plant-based biomass aggregate bulk density low (<800 kg/m³). Choose higher-density aggregate.")
+
     if wb > 15:
-        recs.append("⚠️ Biomass aggregate water absorption high (>15%). Pre‑treatment advised.")
+        recs.append("⚠️ Plant-based biomass aggregate water absorption high (>15%). Pre-treatment advised.")
+
     if dbmax > 15:
-        recs.append("⚠️ Biomass aggregate maximum particle size too large (>15 mm). Recommended 5–10 mm.")
+        recs.append("⚠️ Plant-based biomass aggregate maximum particle size too large (>15 mm). Recommended 5–10 mm.")
+
     if wc > 0.45 and cs_ratio < 0.6:
         recs.append("ℹ️ Under high W/C, increasing sand ratio can partly compensate density loss.")
 
